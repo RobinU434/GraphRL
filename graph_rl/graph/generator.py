@@ -15,8 +15,8 @@ class _BaseGraphGenerator(ABC):
         self,
         n_vertices: int,
         directed: bool = False,
-        node_embedding_dim: int = 32,
-        edge_embedding_dim: int = 16,
+        node_feature_dim: int = 32,
+        edge_feature_dim: int = 16,
         seed: Optional[int] = None,
     ):
         """
@@ -25,14 +25,14 @@ class _BaseGraphGenerator(ABC):
         Args:
             n_vertices: Number of vertices in the graph
             directed: Whether the graph is directed
-            node_embedding_dim: Dimension of node embeddings
-            edge_embedding_dim: Dimension of edge embeddings
+            node_feature_dim: Dimension of node features
+            edge_feature_dim: Dimension of edge features
             seed: Random seed for reproducibility
         """
         self.n_vertices = n_vertices
         self.directed = directed
-        self.node_embedding_dim = node_embedding_dim
-        self.edge_embedding_dim = edge_embedding_dim
+        self.node_feature_dim = node_feature_dim
+        self.edge_feature_dim = edge_feature_dim
         self.seed = seed
 
         if seed is not None:
@@ -43,21 +43,21 @@ class _BaseGraphGenerator(ABC):
         """Create a base empty graph with the specified number of vertices."""
         return ExtendedGraph(n=self.n_vertices, directed=self.directed)
 
-    def _generate_embeddings(self, graph: ExtendedGraph) -> ExtendedGraph:
-        """Generate random embeddings for nodes and edges."""
-        assert graph.node_embedding_dim == self.node_embedding_dim, (
-            f"node_embedding_dim have to be equal, graph:{graph.node_embedding_dim} != self:{self.node_embedding_dim}"
+    def _generate_features(self, graph: ExtendedGraph) -> ExtendedGraph:
+        """Generate random features for nodes and edges."""
+        assert graph.node_feature_dim == self.node_feature_dim, (
+            f"node_feature_dim have to be equal, graph:{graph.node_feature_dim} != self:{self.node_feature_dim}"
         )
-        assert graph.edge_embedding_dim == self.edge_embedding_dim, (
-            f"edge_embedding_dim have to be equal, graph:{graph.edge_embedding_dim} != self:{self.edge_embedding_dim}"
+        assert graph.edge_feature_dim == self.edge_feature_dim, (
+            f"edge_feature_dim have to be equal, graph:{graph.edge_feature_dim} != self:{self.edge_feature_dim}"
         )
-        # Generate node embeddings
+        # Generate node features
         for i in range(self.n_vertices):
-            graph.vs[i]["embedding"] = np.random.randn(self.node_embedding_dim)
+            graph.vs[i]["features"] = np.random.randn(self.node_feature_dim)
 
-        # Generate edge embeddings
+        # Generate edge features
         for edge in graph.es:
-            edge["embedding"] = np.random.randn(self.edge_embedding_dim)
+            edge["features"] = np.random.randn(self.edge_feature_dim)
 
         return graph
 
@@ -117,8 +117,8 @@ class ErdosRenyiGenerator(_BaseGraphGenerator):
             n_vertices=100,
             p=0.1,
             directed=False,
-            node_embedding_dim=32,
-            edge_embedding_dim=16,
+            node_feature_dim=32,
+            edge_feature_dim=16,
             seed=42,
         )
     >>> generator.generate()
@@ -129,8 +129,8 @@ class ErdosRenyiGenerator(_BaseGraphGenerator):
         n_vertices: int,
         p: float = 0.1,
         directed: bool = False,
-        node_embedding_dim: int = 32,
-        edge_embedding_dim: int = 16,
+        node_feature_dim: int = 32,
+        edge_feature_dim: int = 16,
         seed: Optional[int] = None,
     ):
         """
@@ -140,12 +140,12 @@ class ErdosRenyiGenerator(_BaseGraphGenerator):
             n_vertices: Number of vertices
             p: Probability of edge creation
             directed: Whether the graph is directed
-            node_embedding_dim: Dimension of node embeddings
-            edge_embedding_dim: Dimension of edge embeddings
+            node_feature_dim: Dimension of node features
+            edge_feature_dim: Dimension of edge features
             seed: Random seed for reproducibility
         """
         super().__init__(
-            n_vertices, directed, node_embedding_dim, edge_embedding_dim, seed
+            n_vertices, directed, node_feature_dim, edge_feature_dim, seed
         )
         self.p = p
 
@@ -157,11 +157,11 @@ class ErdosRenyiGenerator(_BaseGraphGenerator):
             p=self.p,
             directed=self.directed,
         )
-        graph.node_embedding_dim = self.node_embedding_dim
-        graph.edge_embedding_dim = self.edge_embedding_dim
+        graph.node_feature_dim = self.node_feature_dim
+        graph.edge_feature_dim = self.edge_feature_dim
 
-        # Generate embeddings
-        graph = self._generate_embeddings(graph)
+        # Generate features
+        graph = self._generate_features(graph)
 
         return graph
 
@@ -176,8 +176,8 @@ class WattsStrogatzGenerator(_BaseGraphGenerator):
             k=4,
             p=0.1,
             directed=False,
-            node_embedding_dim=32,
-            edge_embedding_dim=16,
+            node_feature_dim=32,
+            edge_feature_dim=16,
             seed=42,
         )
     >>> generator.generate()
@@ -190,8 +190,8 @@ class WattsStrogatzGenerator(_BaseGraphGenerator):
         k: int = 4,
         p: float = 0.1,
         directed: bool = False,
-        node_embedding_dim: int = 32,
-        edge_embedding_dim: int = 16,
+        node_feature_dim: int = 32,
+        edge_feature_dim: int = 16,
         seed: Optional[int] = None,
     ):
         """
@@ -202,12 +202,12 @@ class WattsStrogatzGenerator(_BaseGraphGenerator):
             k: Each node is connected to k nearest neighbors in ring topology
             p: Rewiring probability
             directed: Whether the graph is directed
-            node_embedding_dim: Dimension of node embeddings
-            edge_embedding_dim: Dimension of edge embeddings
+            node_feature_dim: Dimension of node features
+            edge_feature_dim: Dimension of edge features
             seed: Random seed for reproducibility
         """
         super().__init__(
-            n_vertices, directed, node_embedding_dim, edge_embedding_dim, seed
+            n_vertices, directed, node_feature_dim, edge_feature_dim, seed
         )
         self.k = k
         self.p = p
@@ -227,15 +227,15 @@ class WattsStrogatzGenerator(_BaseGraphGenerator):
             loops=False,
             multiple=False,
         )
-        graph.node_embedding_dim = self.node_embedding_dim
-        graph.edge_embedding_dim = self.edge_embedding_dim
+        graph.node_feature_dim = self.node_feature_dim
+        graph.edge_feature_dim = self.edge_feature_dim
 
         # Set directionality
         if self.directed:
             graph.to_directed()
 
-        # Generate embeddings
-        graph = self._generate_embeddings(graph)
+        # Generate features
+        graph = self._generate_features(graph)
 
         return graph
 
@@ -249,8 +249,8 @@ class BarabasiAlbertGenerator(_BaseGraphGenerator):
             n_vertices=100,
             m=2,
             directed=False,
-            node_embedding_dim=32,
-            edge_embedding_dim=16,
+            node_feature_dim=32,
+            edge_feature_dim=16,
             seed=42,
         )
     >>> generator.generate()
@@ -261,8 +261,8 @@ class BarabasiAlbertGenerator(_BaseGraphGenerator):
         n_vertices: int,
         m: int = 2,
         directed: bool = False,
-        node_embedding_dim: int = 32,
-        edge_embedding_dim: int = 16,
+        node_feature_dim: int = 32,
+        edge_feature_dim: int = 16,
         seed: Optional[int] = None,
     ):
         """
@@ -272,12 +272,12 @@ class BarabasiAlbertGenerator(_BaseGraphGenerator):
             n_vertices: Number of vertices
             m: Number of edges to add in each step
             directed: Whether the graph is directed
-            node_embedding_dim: Dimension of node embeddings
-            edge_embedding_dim: Dimension of edge embeddings
+            node_feature_dim: Dimension of node features
+            edge_feature_dim: Dimension of edge features
             seed: Random seed for reproducibility
         """
         super().__init__(
-            n_vertices, directed, node_embedding_dim, edge_embedding_dim, seed
+            n_vertices, directed, node_feature_dim, edge_feature_dim, seed
         )
         self.m = m
 
@@ -288,15 +288,15 @@ class BarabasiAlbertGenerator(_BaseGraphGenerator):
             n=self.n_vertices,
             m=self.m,
             directed=self.directed,
-            node_embedding_dim=self.node_embedding_dim,
-            edge_embedding_dim=self.edge_embedding_dim,
+            node_feature_dim=self.node_feature_dim,
+            edge_feature_dim=self.edge_feature_dim,
             seed=self.seed,
         )
-        graph.node_embedding_dim = self.node_embedding_dim
-        graph.edge_embedding_dim = self.edge_embedding_dim
+        graph.node_feature_dim = self.node_feature_dim
+        graph.edge_feature_dim = self.edge_feature_dim
 
-        # Generate embeddings
-        graph = self._generate_embeddings(graph)
+        # Generate features
+        graph = self._generate_features(graph)
 
         return graph
 
@@ -316,8 +316,8 @@ class StochasticBlockModelGenerator(_BaseGraphGenerator):
                 [0.1, 0.1, 0.1, 0.5],
             ],
             directed=False,
-            node_embedding_dim=32,
-            edge_embedding_dim=16,
+            node_feature_dim=32,
+            edge_feature_dim=16,
             seed=42,
         )
     >>> generator.generate()
@@ -330,8 +330,8 @@ class StochasticBlockModelGenerator(_BaseGraphGenerator):
         block_sizes: List[int],
         p_matrix: List[List[float]],
         directed: bool = False,
-        node_embedding_dim: int = 32,
-        edge_embedding_dim: int = 16,
+        node_feature_dim: int = 32,
+        edge_feature_dim: int = 16,
         seed: Optional[int] = None,
     ):
         """
@@ -342,12 +342,12 @@ class StochasticBlockModelGenerator(_BaseGraphGenerator):
             block_sizes: List of community sizes
             p_matrix: Matrix of inter/intra community edge probabilities
             directed: Whether the graph is directed
-            node_embedding_dim: Dimension of node embeddings
-            edge_embedding_dim: Dimension of edge embeddings
+            node_feature_dim: Dimension of node features
+            edge_feature_dim: Dimension of edge features
             seed: Random seed for reproducibility
         """
         super().__init__(
-            n_vertices, directed, node_embedding_dim, edge_embedding_dim, seed
+            n_vertices, directed, node_feature_dim, edge_feature_dim, seed
         )
         self.block_sizes = block_sizes
         self.p_matrix = p_matrix
@@ -373,8 +373,8 @@ class StochasticBlockModelGenerator(_BaseGraphGenerator):
             directed=self.directed,
             loops=False,
         )
-        graph.node_embedding_dim = self.node_embedding_dim
-        graph.edge_embedding_dim = self.edge_embedding_dim
+        graph.node_feature_dim = self.node_feature_dim
+        graph.edge_feature_dim = self.edge_feature_dim
 
         # Add community labels to vertices
         community_id = 0
@@ -385,8 +385,8 @@ class StochasticBlockModelGenerator(_BaseGraphGenerator):
                 vertex_id += 1
             community_id += 1
 
-        # Generate embeddings
-        graph = self._generate_embeddings(graph)
+        # Generate features
+        graph = self._generate_features(graph)
 
         return graph
 
@@ -401,8 +401,8 @@ class LatticeGenerator(_BaseGraphGenerator):
             size=10,
             nei=1,
             directed=False,
-            node_embedding_dim=32,
-            edge_embedding_dim=16,
+            node_feature_dim=32,
+            edge_feature_dim=16,
             seed=42,
         )
     >>> generator.generate()
@@ -415,8 +415,8 @@ class LatticeGenerator(_BaseGraphGenerator):
         size: Union[int, List[int]] = 10,
         nei: int = 1,
         directed: bool = False,
-        node_embedding_dim: int = 32,
-        edge_embedding_dim: int = 16,
+        node_feature_dim: int = 32,
+        edge_feature_dim: int = 16,
         seed: Optional[int] = None,
     ):
         """
@@ -427,8 +427,8 @@ class LatticeGenerator(_BaseGraphGenerator):
             size: Size(s) of the lattice in each dimension
             nei: Neighborhood degree
             directed: Whether the graph is directed
-            node_embedding_dim: Dimension of node embeddings
-            edge_embedding_dim: Dimension of edge embeddings
+            node_feature_dim: Dimension of node features
+            edge_feature_dim: Dimension of edge features
             seed: Random seed for reproducibility
         """
         # Calculate total number of vertices
@@ -439,7 +439,7 @@ class LatticeGenerator(_BaseGraphGenerator):
             n_vertices = np.prod(size)
 
         super().__init__(
-            n_vertices, directed, node_embedding_dim, edge_embedding_dim, seed
+            n_vertices, directed, node_feature_dim, edge_feature_dim, seed
         )
         self.dim = dim
         self.size = size
@@ -456,11 +456,11 @@ class LatticeGenerator(_BaseGraphGenerator):
             mutual=not self.directed,
             circular=False,
         )
-        graph.node_embedding_dim = self.node_embedding_dim
-        graph.edge_embedding_dim = self.edge_embedding_dim
+        graph.node_feature_dim = self.node_feature_dim
+        graph.edge_feature_dim = self.edge_feature_dim
 
-        # Generate embeddings
-        graph = self._generate_embeddings(graph)
+        # Generate features
+        graph = self._generate_features(graph)
 
         return graph
 
@@ -475,8 +475,8 @@ class ForestFireGenerator(_BaseGraphGenerator):
             bw_factor=0.2,
             ambs=2,
             directed=True,
-            node_embedding_dim=32,
-            edge_embedding_dim=16,
+            node_feature_dim=32,
+            edge_feature_dim=16,
             seed=42
         )
     >>> er_graph = generator.generate()
@@ -490,8 +490,8 @@ class ForestFireGenerator(_BaseGraphGenerator):
         bw_factor: float = 0.2,
         ambs: int = 2,
         directed: bool = True,
-        node_embedding_dim: int = 32,
-        edge_embedding_dim: int = 16,
+        node_feature_dim: int = 32,
+        edge_feature_dim: int = 16,
         seed: Optional[int] = None,
     ):
         """
@@ -503,12 +503,12 @@ class ForestFireGenerator(_BaseGraphGenerator):
             bw_factor: Backward burning ratio
             ambs: Number of ambassador vertices
             directed: Whether the graph is directed (usually True for this model)
-            node_embedding_dim: Dimension of node embeddings
-            edge_embedding_dim: Dimension of edge embeddings
+            node_feature_dim: Dimension of node features
+            edge_feature_dim: Dimension of edge features
             seed: Random seed for reproducibility
         """
         super().__init__(
-            n_vertices, directed, node_embedding_dim, edge_embedding_dim, seed
+            n_vertices, directed, node_feature_dim, edge_feature_dim, seed
         )
         self.fw_prob = fw_prob
         self.bw_factor = bw_factor
@@ -524,10 +524,10 @@ class ForestFireGenerator(_BaseGraphGenerator):
             ambs=self.ambs,
             directed=self.directed,
         )
-        graph.node_embedding_dim = self.node_embedding_dim
-        graph.edge_embedding_dim = self.edge_embedding_dim
+        graph.node_feature_dim = self.node_feature_dim
+        graph.edge_feature_dim = self.edge_feature_dim
 
-        # Generate embeddings
-        graph = self._generate_embeddings(graph)
+        # Generate features
+        graph = self._generate_features(graph)
 
         return graph

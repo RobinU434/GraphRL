@@ -3,56 +3,57 @@ import numpy as np
 from typing import Optional, Callable, Dict, List, Tuple
 import random
 from graph_rl.graph.utils import gaussian_feature_func_generator
+import networkx as nx
 
 
 class ExtendedGraph(ig.Graph):
     """
     Extended Graph class that inherits from igraph's Graph class and adds
-    additional functionality for embeddings and stochastic transitions.
+    additional functionality for features and stochastic transitions.
     """
 
     def __init__(
         self,
         *args,
-        node_embedding_dim: int = 32,
-        edge_embedding_dim: int = 16,
+        node_feature_dim: int = 32,
+        edge_feature_dim: int = 16,
         seed: Optional[int] = None,
         **kwargs,
     ):
         """
-        Initialize an extended graph with embedding dimensions.
+        Initialize an extended graph with feature dimensions.
 
         Args:
             *args: Arguments to pass to the igraph Graph constructor
-            node_embedding_dim: Dimension of node embeddings
-            edge_embedding_dim: Dimension of edge embeddings
+            node_feature_dim: Dimension of node features
+            edge_feature_dim: Dimension of edge features
             seed: Random seed for reproducibility
             **kwargs: Keyword arguments to pass to the igraph Graph constructor
         """
         # Initialize the parent Graph class
         super().__init__(*args, **kwargs)
 
-        self.node_embedding_dim = node_embedding_dim
-        self.edge_embedding_dim = edge_embedding_dim
+        self.node_feature_dim = node_feature_dim
+        self.edge_feature_dim = edge_feature_dim
 
         if seed is not None:
             np.random.seed(seed)
             random.seed(seed)
 
-    def generate_embeddings(self) -> "ExtendedGraph":
+    def generate_features(self) -> "ExtendedGraph":
         """
-        Generate random embeddings for nodes and edges.
+        Generate random features for nodes and edges.
 
         Returns:
             Self for method chaining
         """
-        # Generate node embeddings
+        # Generate node features
         for vertex in self.vs:
-            vertex["embedding"] = np.random.randn(self.node_embedding_dim)
+            vertex["features"] = np.random.randn(self.node_feature_dim)
 
-        # Generate edge embeddings
+        # Generate edge features
         for edge in self.es:
-            edge["embedding"] = np.random.randn(self.edge_embedding_dim)
+            edge["features"] = np.random.randn(self.edge_feature_dim)
 
         return self
 
@@ -146,45 +147,45 @@ class ExtendedGraph(ig.Graph):
 
         return [v["community"] for v in self.vs]
 
-    def get_node_embeddings(self) -> np.ndarray:
+    def get_node_features(self) -> np.ndarray:
         """
-        Get node embeddings as a matrix.
+        Get node features as a matrix.
 
         Returns:
-            Matrix of node embeddings where each row corresponds to a node
+            Matrix of node features where each row corresponds to a node
         """
-        if "embedding" not in self.vs.attributes():
+        if "features" not in self.vs.attributes():
             raise ValueError(
-                "Node embeddings not found in the graph. Call generate_embeddings() first."
+                "Node features not found in the graph. Call generate_features() first."
             )
 
         n = self.vcount()
-        emb_dim = len(self.vs[0]["embedding"])
-        embeddings = np.zeros((n, emb_dim))
+        emb_dim = len(self.vs[0]["features"])
+        features = np.zeros((n, emb_dim))
 
         for i in range(n):
-            embeddings[i] = self.vs[i]["embedding"]
+            features[i] = self.vs[i]["features"]
 
-        return embeddings
+        return features
 
-    def get_edge_embeddings(self) -> Dict[Tuple[int, int], np.ndarray]:
+    def get_edge_features(self) -> Dict[Tuple[int, int], np.ndarray]:
         """
-        Get edge embeddings as a dictionary.
+        Get edge features as a dictionary.
 
         Returns:
-            Dictionary mapping (source, target) to edge embeddings
+            Dictionary mapping (source, target) to edge features
         """
-        if "embedding" not in self.es.attributes():
+        if "features" not in self.es.attributes():
             raise ValueError(
-                "Edge embeddings not found in the graph. Call generate_embeddings() first."
+                "Edge features not found in the graph. Call generate_features() first."
             )
 
-        embeddings = {}
+        features = {}
         for edge in self.es:
             source, target = edge.tuple
-            embeddings[(source, target)] = edge["embedding"]
+            features[(source, target)] = edge["features"]
 
-        return embeddings
+        return features
 
     def detect_communities(self, algorithm: str = "multilevel") -> List[int]:
         """
@@ -237,7 +238,7 @@ class ExtendedGraph(ig.Graph):
         """
         if feature_generator is None:
             # Default: random features based on degree and local clustering
-            feature_generator = gaussian_feature_func_generator(self.node_embedding_dim)
+            feature_generator = gaussian_feature_func_generator(self.node_feature_dim)
         for vertex in self.vs:
             vertex["features"] = feature_generator(vertex, self)
 
@@ -250,13 +251,6 @@ class ExtendedGraph(ig.Graph):
         Returns:
             NetworkX graph representation
         """
-        try:
-            import networkx as nx
-        except ImportError:
-            raise ImportError(
-                "NetworkX is required for this method. Install it with 'pip install networkx'"
-            )
-
         # Determine if directed
         if self.is_directed():
             nx_graph = nx.DiGraph()
@@ -309,12 +303,35 @@ class ExtendedGraph(ig.Graph):
             "vertex_color": vertex_colors,
             "vertex_label": None,
             "edge_width": 0.5,
+            "bbox": (400, 400),
+            "margin": 40,
+        }
+
+        # Update with any user kwargs
+        return self.plot(filename, layout, **visual_style)
+    
+    def plot(self, filename=None, layout=None, **kwargs):
+        """
+        Plot the graph.
+
+        Args:
+            filename: File to save the plot (if None, shows interactive plot)
+            layout: Graph layout to use (if None, uses Fruchterman-Reingold)
+            **kwargs: Additional arguments to pass to plot()
+        """
+        visual_style = {
+            "vertex_size": 10,
+            "vertex_label": None,
+            "edge_width": 0.5,
             "layout": layout,
-            "bbox": (800, 800),
+            "bbox": (400, 400),
             "margin": 40,
         }
 
         # Update with any user kwargs
         visual_style.update(kwargs)
 
-        return self.plot(filename, **visual_style)
+        return ig.plot(
+            ig.Graph(len(self.vs), self.get_edgelist(), directed=self.is_directed()),
+            **visual_style,
+        )
