@@ -18,24 +18,25 @@ class ObsVectorizeWrapper(ObservationWrapper):
         total_dim = (
             1  # Current node ID
             + node_feat_dim  # Node features
-            + self.max_out_edges  # Valid action mask
-            + (self.max_out_edges * edge_feat_dim)  # Edge features
-            + self.max_out_edges  # weights
+            + env.max_out_edges  # Valid action mask
+            + env.max_out_edges  # neighbors
+            + (env.max_out_edges * edge_feat_dim)  # Edge features
+            + env.max_out_edges  # weights
         )
 
         self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(total_dim,)
+            low=-np.inf, high=np.inf, shape=(total_dim,),dtype=float
         )
 
     def observation(self, observation):
         observation = np.concat(
             [
-                np.array(observation["current_node"]),
+                np.array([observation["current_node"]]),
                 observation["node_features"],
                 observation["neighbors"],
                 observation["edge_features"].flatten(),
                 observation["valid_actions"],
                 observation["weights"],
-            ]
+            ], dtype=float
         )
         return observation
