@@ -106,7 +106,7 @@ class GraphNavigationEnv(gym.Env):
                 assert stack.shape == (self.graph.ecount(), self.edge_feature_dim)
             except (ValueError, AssertionError):
                 raise ValueError(
-                    f"all edge feature elements must have dimension of: {self.node_feature_dim}"
+                    f"all edge feature elements must have dimension of: {self.edge_feature_dim}"
                 )
 
         # Ensure all edges have weights if not present
@@ -142,9 +142,7 @@ class GraphNavigationEnv(gym.Env):
                 "node_features": spaces.Box(
                     low=-np.inf,
                     high=np.inf,
-                    shape=(self.node_feature_dim,)
-                    if self.node_feature_dim
-                    else (1,),
+                    shape=(self.node_feature_dim,) if self.node_feature_dim else (1,),
                 ),
                 "neighbors": spaces.Box(
                     low=0,
@@ -167,7 +165,7 @@ class GraphNavigationEnv(gym.Env):
                 ),
             }
         )
-    
+
     def reset(self, seed=None, options=None):
         """
         Reset the environment to start a new episode.
@@ -219,7 +217,9 @@ class GraphNavigationEnv(gym.Env):
             truncated: Whether the episode is truncated (e.g., due to max steps)
             info: Additional information
         """
-        assert self.action_space.contains(action), "Action space does not contain given action"
+        assert self.action_space.contains(action), (
+            "Action space does not contain given action"
+        )
         # Initialize info dict
         info = {"is_success": False}
 
@@ -232,6 +232,7 @@ class GraphNavigationEnv(gym.Env):
             info["is_valid_action"] = False
             info["message"] = "Invalid action selected"
             next_node = self.current_node  # Stay in the same node
+            terminated = False
         else:
             # Get the selected edge and its target
             selected_edge_id = available_edges[action]
@@ -252,6 +253,10 @@ class GraphNavigationEnv(gym.Env):
             reward = self.reward_function(
                 self.current_node, selected_edge_id, next_node, self.graph
             )
+            # Reward-Function-determined termination
+            terminated = self.reward_function.is_done(
+                self.current_node, selected_edge_id, next_node, self.graph
+            )  
 
             info["is_valid_action"] = True
             info["edge_taken"] = selected_edge_id
@@ -261,7 +266,6 @@ class GraphNavigationEnv(gym.Env):
         self.steps_taken += 1
 
         # Determine if episode has ended
-        terminated = self.reward_function.is_done()  # Reward-Function-determined termination
         truncated = self.steps_taken >= self.max_steps  # Time limit reached
 
         # Get new observation
@@ -301,6 +305,7 @@ class GraphNavigationEnv(gym.Env):
             edge = self.graph.es[edge_id]
             edge_features[i] = edge["features"]
             weights[i] = edge["weight"]
+            neighbors[i] = edge.target if edge.target != self.current_node else edge.source
 
         # Extract node features
         node_features = node["features"]
