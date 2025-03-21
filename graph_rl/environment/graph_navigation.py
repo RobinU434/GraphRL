@@ -143,6 +143,7 @@ class GraphNavigationEnv(gym.Env):
                     low=-np.inf,
                     high=np.inf,
                     shape=(self.node_feature_dim,) if self.node_feature_dim else (1,),
+                    dtype=float,
                 ),
                 "neighbors": spaces.Box(
                     low=0,
@@ -156,12 +157,13 @@ class GraphNavigationEnv(gym.Env):
                     shape=(self.max_out_edges, self.edge_feature_dim)
                     if self.edge_feature_dim
                     else (self.max_out_edges, 1),
+                    dtype=float,
                 ),
                 "valid_actions": spaces.Box(
                     low=0, high=1, shape=(self.max_out_edges,), dtype=np.int8
                 ),
                 "weights": spaces.Box(
-                    low=-np.inf, high=np.inf, shape=(self.max_out_edges,)
+                    low=-np.inf, high=np.inf, shape=(self.max_out_edges,), dtype=float
                 ),
             }
         )
@@ -256,7 +258,7 @@ class GraphNavigationEnv(gym.Env):
             # Reward-Function-determined termination
             terminated = self.reward_function.is_done(
                 self.current_node, selected_edge_id, next_node, self.graph
-            )  
+            )
 
             info["is_valid_action"] = True
             info["edge_taken"] = selected_edge_id
@@ -305,7 +307,9 @@ class GraphNavigationEnv(gym.Env):
             edge = self.graph.es[edge_id]
             edge_features[i] = edge["features"]
             weights[i] = edge["weight"]
-            neighbors[i] = edge.target if edge.target != self.current_node else edge.source
+            neighbors[i] = (
+                edge.target if edge.target != self.current_node else edge.source
+            )
 
         # Extract node features
         node_features = node["features"]
