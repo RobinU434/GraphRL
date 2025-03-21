@@ -228,7 +228,7 @@ class GraphNavigationEnv(gym.Env):
         # Get available edges from current node
         available_edges = self.graph.incident(self.current_node, mode="out")
         # Check if action is valid
-        if action not in available_edges:
+        if action >= len(available_edges):
             # Invalid action, stay in place and receive penalty
             reward = -10.0  # Penalty for invalid action
             info["is_valid_action"] = False
@@ -241,7 +241,7 @@ class GraphNavigationEnv(gym.Env):
             edge = self.graph.es[selected_edge_id]
 
             # Get source and target nodes
-            target = self.graph.vs[edge.target]["id"]
+            target = self.graph.vs[edge.target].index
             next_node = target
 
             # Apply stochastic transition if configured
